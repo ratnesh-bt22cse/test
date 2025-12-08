@@ -1,0 +1,59 @@
+version: '3.8'
+
+# AWS EC2 deployment with custom ports
+# Frontend: 3003, Backend: 3004, MongoDB: 27017 (internal)
+
+services:
+  # MongoDB Database (separate container)
+  mongo:
+    image: mongo:6
+    container_name: mern-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=mern_crud
+    networks:
+      - mern-network
+
+  # Backend API on port 3004
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mern-backend
+    restart: always
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - MONGODB_URI=mongodb://mongo:27017/mern_crud
+    depends_on:
+      - mongo
+    networks:
+      - mern-network
+
+  # Frontend on port 3003
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.aws
+      args:
+        - REACT_APP_API_URL=http://YOUR_AWS_EC2_IP:3004/api
+    container_name: mern-frontend
+    restart: always
+    ports:
+      - "3003:3003"
+    depends_on:
+      - backend
+    networks:
+      - mern-network
+
+volumes:
+  mongo-data:
+
+networks:
+  mern-network:
+    driver: bridge
