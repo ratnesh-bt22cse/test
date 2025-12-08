@@ -1,0 +1,59 @@
+version: '3.8'
+
+# Production docker-compose for GCP E2 deployment
+# Use this file with: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:6
+    container_name: mern-mongo
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - mern-network
+    # In production, consider using MongoDB Atlas instead
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mern-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/mern_crud
+      # For MongoDB Atlas, use:
+      # - MONGODB_URI=${MONGODB_ATLAS_URI}
+    depends_on:
+      - mongo
+    networks:
+      - mern-network
+
+  # Frontend (served on port 80)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Replace YOUR_GCP_VM_IP with your actual GCP E2 instance external IP
+        - REACT_APP_API_URL=http://YOUR_GCP_VM_IP:5000/api
+    container_name: mern-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mern-network
+
+volumes:
+  mongo-data:
+
+networks:
+  mern-network:
+    driver: bridge
