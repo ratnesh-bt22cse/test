@@ -1,6 +1,11 @@
-node_modules
-build
-npm-debug.log
-.env
-.git
+node_modulesnode_modules
+
+buildbuild
+
+npm-debug.lognpm-debug.log
+
+.env.env
+
+.git.git
+
 .gitignore

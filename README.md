@@ -1,42 +1,82 @@
-# MERN CRUD App - Task Manager
+# MERN Microservices Architecture# MERN CRUD App - Task Manager
 
-A simple MERN (MongoDB, Express, React, Node.js) CRUD application designed for learning GCP E2 instance deployment.
 
-## 📁 Project Structure
 
-```
-test_project/
-├── backend/                 # Express.js API Server
-│   ├── controllers/         # Route controllers
-│   ├── models/              # MongoDB models
-│   ├── routes/              # API routes
-│   ├── server.js            # Entry point
-│   ├── Dockerfile           # Backend Docker config
+A microservices-based CRUD application with separate Docker containers (no Docker Compose).A simple MERN (MongoDB, Express, React, Node.js) CRUD application designed for learning GCP E2 instance deployment.
+
+
+
+## 📁 Project Structure## 📁 Project Structure
+
+
+
+``````
+
+microservices/test_project/
+
+├── api-gateway/          # Nginx reverse proxy (Port 80)├── backend/                 # Express.js API Server
+
+├── user-service/         # User authentication (Port 3001)│   ├── controllers/         # Route controllers
+
+├── task-service/         # Task CRUD operations (Port 3002)│   ├── models/              # MongoDB models
+
+├── frontend/             # React application (Port 3000)│   ├── routes/              # API routes
+
+└── scripts/              # Build & deployment scripts│   ├── server.js            # Entry point
+
+```│   ├── Dockerfile           # Backend Docker config
+
 │   └── package.json
-├── frontend/                # React Application
+
+## 🏗️ Architecture├── frontend/                # React Application
+
 │   ├── public/              # Static files
-│   ├── src/
-│   │   ├── api/             # API service
-│   │   ├── components/      # React components
-│   │   ├── App.js           # Main component
-│   │   └── index.js         # Entry point
-│   ├── Dockerfile           # Frontend Docker config
-│   ├── nginx.conf           # Nginx configuration
-│   └── package.json
-├── scripts/                 # Deployment scripts
-│   ├── setup-gcp-vm.sh      # GCP VM setup script
-│   └── deploy.sh            # Deployment script
-├── docker-compose.yml       # Local development
-├── docker-compose.prod.yml  # Production deployment
-└── README.md
-```
 
-## 🚀 Quick Start (Local Development)
+```│   ├── src/
 
-### Prerequisites
+                    ┌─────────────────┐│   │   ├── api/             # API service
+
+                    │    Frontend     ││   │   ├── components/      # React components
+
+                    │   (Port 3000)   ││   │   ├── App.js           # Main component
+
+                    └────────┬────────┘│   │   └── index.js         # Entry point
+
+                             ││   ├── Dockerfile           # Frontend Docker config
+
+                             ▼│   ├── nginx.conf           # Nginx configuration
+
+                    ┌─────────────────┐│   └── package.json
+
+                    │  API Gateway    │├── scripts/                 # Deployment scripts
+
+                    │   (Port 80)     ││   ├── setup-gcp-vm.sh      # GCP VM setup script
+
+                    └────────┬────────┘│   └── deploy.sh            # Deployment script
+
+                             │├── docker-compose.yml       # Local development
+
+              ┌──────────────┼──────────────┐├── docker-compose.prod.yml  # Production deployment
+
+              ▼              ▼              ▼└── README.md
+
+     ┌─────────────┐ ┌─────────────┐ ┌─────────────┐```
+
+     │ User Service│ │ Task Service│ │   MongoDB   │
+
+     │ (Port 3001) │ │ (Port 3002) │ │ (Port 27017)│## 🚀 Quick Start (Local Development)
+
+     └─────────────┘ └─────────────┘ └─────────────┘
+
+```### Prerequisites
+
 - Node.js 18+ installed
-- MongoDB installed locally OR Docker
+
+## 🚀 Deployment (Without Docker Compose)- MongoDB installed locally OR Docker
+
 - npm or yarn
+
+Each service runs as a separate Docker container. See `scripts/` folder for commands.
 
 ### Option 1: Without Docker
 

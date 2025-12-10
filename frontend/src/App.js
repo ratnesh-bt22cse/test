@@ -1,106 +1,137 @@
 import React, { useState, useEffect } from 'react';
-import TaskForm from './components/TaskForm';
-import TaskList from './components/TaskList';
-import { getTasks, createTask, updateTask, deleteTask } from './api/taskApi';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || '';
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingTask, setEditingTask] = useState(null);
+  const [formData, setFormData] = useState({ title: '', description: '' });
+  const [editingId, setEditingId] = useState(null);
 
-  // Fetch all tasks
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await getTasks();
-      setTasks(response.data);
+      const res = await axios.get(`${API_URL}/api/tasks`);
+      setTasks(res.data.data || []);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch tasks. Make sure the backend is running.');
-      console.error('Error fetching tasks:', err);
+      setError('Failed to fetch tasks');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  useEffect(() => { fetchTasks(); }, []);
 
-  // Create or Update task
-  const handleSubmit = async (taskData) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      if (editingTask) {
-        await updateTask(editingTask._id, taskData);
-        setEditingTask(null);
+      if (editingId) {
+        await axios.put(`${API_URL}/api/tasks/${editingId}`, formData);
+        setEditingId(null);
       } else {
-        await createTask(taskData);
+        await axios.post(`${API_URL}/api/tasks`, formData);
       }
+      setFormData({ title: '', description: '' });
       fetchTasks();
-      setError(null);
     } catch (err) {
-      setError('Failed to save task. Please try again.');
-      console.error('Error saving task:', err);
+      setError('Failed to save task');
     }
   };
 
-  // Delete task
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
+    if (window.confirm('Delete this task?')) {
       try {
-        await deleteTask(id);
+        await axios.delete(`${API_URL}/api/tasks/${id}`);
         fetchTasks();
-        setError(null);
       } catch (err) {
-        setError('Failed to delete task. Please try again.');
-        console.error('Error deleting task:', err);
+        setError('Failed to delete task');
       }
     }
   };
 
-  // Toggle task completion
-  const handleToggleComplete = async (task) => {
+  const handleToggle = async (task) => {
     try {
-      await updateTask(task._id, { ...task, completed: !task.completed });
+      await axios.put(`${API_URL}/api/tasks/${task._id}`, { ...task, completed: !task.completed });
       fetchTasks();
-      setError(null);
     } catch (err) {
-      setError('Failed to update task. Please try again.');
-      console.error('Error updating task:', err);
+      setError('Failed to update task');
     }
   };
 
-  // Edit task
   const handleEdit = (task) => {
-    setEditingTask(task);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Cancel editing
-  const handleCancelEdit = () => {
-    setEditingTask(null);
+    setFormData({ title: task.title, description: task.description });
+    setEditingId(task._id);
   };
 
   return (
     <div className="app">
-      <h1>📝 Task Manager</h1>
+      <h1>Task Manager (Microservices)</h1>
       
       {error && <div className="error">{error}</div>}
       
-      <TaskForm
-        onSubmit={handleSubmit}
-        editingTask={editingTask}
-        onCancel={handleCancelEdit}
-      />
-      
-      <TaskList
-        tasks={tasks}
-        loading={loading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onToggleComplete={handleToggleComplete}
-      />
+      <div className="card">
+        <h2>{editingId ? 'Edit Task' : 'Add Task'}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Title</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary">
+            {editingId ? 'Update' : 'Add'} Task
+          </button>
+          {editingId && (
+            <button type="button" className="btn" onClick={() => {
+              setEditingId(null);
+              setFormData({ title: '', description: '' });
+            }}>Cancel</button>
+          )}
+        </form>
+      </div>
+
+      <div className="card">
+        <h2>Tasks ({tasks.length})</h2>
+        {loading ? (
+          <div className="loading">Loading...</div>
+        ) : tasks.length === 0 ? (
+          <p>No tasks yet</p>
+        ) : (
+          tasks.map(task => (
+            <div key={task._id} className="task-item">
+              <div>
+                <span className={`task-title ${task.completed ? 'completed' : ''}`}>
+                  {task.title}
+                </span>
+                <span className={`status-badge ${task.completed ? 'completed' : 'pending'}`}>
+                  {task.completed ? 'Done' : 'Pending'}
+                </span>
+                {task.description && <p style={{color: '#666', fontSize: '14px'}}>{task.description}</p>}
+              </div>
+              <div>
+                <button className="btn btn-success" onClick={() => handleToggle(task)}>
+                  {task.completed ? 'Undo' : 'Done'}
+                </button>
+                <button className="btn btn-primary" onClick={() => handleEdit(task)}>Edit</button>
+                <button className="btn btn-danger" onClick={() => handleDelete(task._id)}>Delete</button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
