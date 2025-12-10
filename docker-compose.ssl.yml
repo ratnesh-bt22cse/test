@@ -1,0 +1,74 @@
+version: '3.8'
+
+# Production docker-compose with HTTPS/SSL support
+# 
+# SETUP INSTRUCTIONS:
+# 1. Replace YOUR_DOMAIN with your domain (e.g., ratnesh-mern.duckdns.org)
+# 2. Replace YOUR_EMAIL with your email for SSL certificate
+# 3. Run: ./scripts/init-ssl.sh YOUR_DOMAIN YOUR_EMAIL
+# 4. Then: docker-compose -f docker-compose.ssl.yml up -d --build
+
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:6
+    container_name: mern-mongo
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - mern-network
+
+  # Backend API (also needs HTTPS for production)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mern-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/mern_crud
+    depends_on:
+      - mongo
+    networks:
+      - mern-network
+
+  # Frontend with Nginx and SSL
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.ssl
+      args:
+        - REACT_APP_API_URL=https://YOUR_DOMAIN/api
+    container_name: mern-frontend
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - backend
+    networks:
+      - mern-network
+
+  # Certbot for SSL certificate renewal
+  certbot:
+    image: certbot/certbot
+    container_name: mern-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  mongo-data:
+
+networks:
+  mern-network:
+    driver: bridge
